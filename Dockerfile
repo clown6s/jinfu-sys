@@ -17,6 +17,9 @@ FROM eclipse-temurin:21-jre-alpine AS runtime
 RUN addgroup -g 1000 jinfu && \
     adduser -u 1000 -G jinfu -D jinfu
 
+# 运行时依赖（wget 用于 HEALTHCHECK）
+RUN apk add --no-cache wget
+
 # 日志目录
 RUN mkdir -p /var/log/jinfu-sys && chown -R jinfu:jinfu /var/log/jinfu-sys
 

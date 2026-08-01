@@ -27,7 +27,7 @@ services:
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin123}
       - MINIO_BUCKET=${MINIO_BUCKET:-jinfu-sys}
       - JWT_SECRET=${JWT_SECRET}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
       # 生产环境覆盖
       - KNIFE4J_ENABLE=false
       - SPRINGDOC_API_DOCS_ENABLED=false
@@ -37,6 +37,7 @@ services:
       - LOGGING_LEVEL_COM_JINFU=warn
       - LOGGING_LEVEL_FLOWABLE=warn
       - LOGGING_LEVEL_SPRING=warn
+      - FLOWABLE_SCHEMA_UPDATE=false
       - DB_POOL_MAX=20
       - DB_POOL_MIN=5
       - REDIS_POOL_MAX=16
@@ -130,7 +131,6 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
-      - GF_INSTALL_PLUGINS=""
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
@@ -182,6 +182,24 @@ services:
     depends_on:
       - loki
 
+  # ==================== Node Exporter (主机指标) ====================
+  node-exporter:
+    image: prom/node-exporter:v1.12.0
+    container_name: jinfu-node-exporter
+    restart: unless-stopped
+    command:
+      - "--path.rootfs=/host"
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - jinfu-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9100/metrics"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
   # ==================== Alertmanager ====================
   alertmanager:
     image: prom/alertmanager:v0.33.1
@@ -190,6 +208,8 @@ services:
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--storage.path=/alertmanager"
+    environment:
+      - WECOM_WEBHOOK_URL=${WECOM_WEBHOOK_URL}
     volumes:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager-data:/alertmanager

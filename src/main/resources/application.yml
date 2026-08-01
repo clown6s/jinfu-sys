@@ -89,7 +89,7 @@ flowable:
   check-process-definitions: true
   history-level: full
   async-executor-activate: true
-  database-schema-update: true
+  database-schema-update: ${FLOWABLE_SCHEMA_UPDATE:true}
 
 # ---- Knife4j/Swagger (开发默认开启，生产通过环境变量关闭) ----
 knife4j:
@@ -142,8 +142,9 @@ management:
   metrics:
     tags:
       application: jinfu-sys
-    export:
-      prometheus:
+  prometheus:
+    metrics:
+      export:
         enabled: true
   health:
     redis:
