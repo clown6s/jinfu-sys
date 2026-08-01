@@ -15,6 +15,7 @@ import com.jinfu.approval.dto.StartProcessRequest;
 import com.jinfu.approval.entity.SysApprovalNode;
 import com.jinfu.approval.entity.SysProcessInstance;
 import com.jinfu.approval.entity.SysProcessTemplate;
+import com.jinfu.approval.event.ApprovalFinishedEvent;
 import com.jinfu.approval.mapper.SysApprovalNodeMapper;
 import com.jinfu.approval.mapper.SysProcessInstanceMapper;
 import com.jinfu.approval.mapper.SysProcessTemplateMapper;
@@ -23,6 +24,7 @@ import com.jinfu.common.exception.BusinessException;
 import com.jinfu.common.result.ResultCode;
 import com.jinfu.form.entity.FormDefinition;
 import com.jinfu.form.mapper.FormDefinitionMapper;
+import com.jinfu.message.service.MessageService;
 import com.jinfu.system.entity.SysDept;
 import com.jinfu.system.entity.SysRole;
 import com.jinfu.system.entity.SysUser;
@@ -33,7 +35,7 @@ import com.jinfu.system.mapper.SysUserMapper;
 import com.jinfu.system.mapper.SysUserRoleMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,7 +57,8 @@ public class ProcessInstanceServiceImpl
     private final SysUserRoleMapper sysUserRoleMapper;
     private final SysRoleMapper sysRoleMapper;
     private final SysDeptMapper sysDeptMapper;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final MessageService messageService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -141,8 +144,9 @@ public class ProcessInstanceServiceImpl
         if (!ccUserInfo.isEmpty()) {
             for (Map<String, Object> cc : ccUserInfo) {
                 Long ccId = ((Number) cc.get("id")).longValue();
-                sendNotificationToUser(ccId,
-                        String.format("【抄送】%s 发起了审批【%s】，请知悉", userName, request.getTitle()));
+                messageService.sendToUser(ccId, MessageService.TYPE_CC, "审批抄送",
+                        String.format("%s 发起了审批【%s】，请知悉", userName, request.getTitle()),
+                        instance.getId());
             }
         }
 
@@ -188,8 +192,14 @@ public class ProcessInstanceServiceImpl
             cancelPendingNodes(instance.getId(), node.getStepOrder());
 
             // 通知发起人
-            sendNotificationToUser(instance.getInitiatorId(),
-                    String.format("您的审批【%s】已被【%s】驳回", instance.getTitle(), node.getStepName()));
+            messageService.sendToUser(instance.getInitiatorId(), MessageService.TYPE_APPROVAL,
+                    "审批被驳回",
+                    String.format("您的审批【%s】已被【%s】驳回", instance.getTitle(), node.getStepName()),
+                    instance.getId());
+
+            // 发布终态事件（日报等业务联动更新）
+            eventPublisher.publishEvent(new ApprovalFinishedEvent(
+                    instance.getId(), "rejected", instance.getTitle(), instance.getInitiatorId()));
         } else {
             // 同意→检查是否还有下一步
             List<SysApprovalNode> allNodes = approvalNodeMapper.selectByInstanceId(instance.getId());
@@ -204,8 +214,14 @@ public class ProcessInstanceServiceImpl
                 instance.setUpdateTime(LocalDateTime.now());
                 updateById(instance);
 
-                sendNotificationToUser(instance.getInitiatorId(),
-                        String.format("您的审批【%s】已全部通过", instance.getTitle()));
+                messageService.sendToUser(instance.getInitiatorId(), MessageService.TYPE_APPROVAL,
+                        "审批已通过",
+                        String.format("您的审批【%s】已全部通过", instance.getTitle()),
+                        instance.getId());
+
+                // 发布终态事件（日报等业务联动更新）
+                eventPublisher.publishEvent(new ApprovalFinishedEvent(
+                        instance.getId(), "approved", instance.getTitle(), instance.getInitiatorId()));
             } else {
                 // 推进到下一步
                 instance.setCurrentStep(nextNode.getStepOrder());
@@ -236,6 +252,10 @@ public class ProcessInstanceServiceImpl
 
         // 取消所有 pending 节点
         cancelPendingNodes(instanceId, 0);
+
+        // 发布终态事件（日报等业务联动更新）
+        eventPublisher.publishEvent(new ApprovalFinishedEvent(
+                instanceId, "cancelled", instance.getTitle(), instance.getInitiatorId()));
     }
 
     @Override
@@ -431,30 +451,14 @@ public class ProcessInstanceServiceImpl
     }
 
     /**
-     * 发送待办通知给节点审批人
+     * 发送待办通知给节点审批人（落库 + WS 推送）
      */
     private void sendNotification(SysApprovalNode node) {
         if (node.getApproverId() != null && node.getApproverId() > 0) {
             SysProcessInstance instance = getById(node.getInstanceId());
             String msg = String.format("您有新的审批待办：【%s】—— %s", instance.getTitle(), node.getStepName());
-            sendNotificationToUser(node.getApproverId(), msg);
-        }
-    }
-
-    /**
-     * 向指定用户推送消息
-     */
-    private void sendNotificationToUser(Long userId, String message) {
-        try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("type", "approval");
-            payload.put("message", message);
-            payload.put("timestamp", System.currentTimeMillis());
-            messagingTemplate.convertAndSendToUser(
-                    String.valueOf(userId), "/queue/notifications", payload);
-            log.info("WebSocket 推送成功: userId={}, msg={}", userId, message);
-        } catch (Exception e) {
-            log.error("WebSocket 推送失败: userId={}", userId, e);
+            messageService.sendToUser(node.getApproverId(), MessageService.TYPE_APPROVAL,
+                    "新的审批待办", msg, instance.getId());
         }
     }
 

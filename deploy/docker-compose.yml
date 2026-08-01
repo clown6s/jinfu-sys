@@ -12,6 +12,7 @@ services:
     image: jinfu-sys:${APP_VERSION:-latest}
     container_name: jinfu-sys
     restart: unless-stopped
+    pull_policy: build
     deploy:
       resources:
         limits:
