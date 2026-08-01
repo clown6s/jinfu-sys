@@ -56,9 +56,19 @@ public class TokenService {
                 .signWith(getSigningKey())
                 .compact();
 
-        // Cache LoginUser in Redis for quick lookup
+        // Cache a trimmed LoginUser in Redis: authorization fields only.
+        // PII (nickname/avatar/email/phone) is NOT cached — profile endpoints
+        // load those from the database to limit exposure on Redis compromise.
         try {
-            String userJson = objectMapper.writeValueAsString(loginUser);
+            LoginUser cached = new LoginUser();
+            cached.setUserId(loginUser.getUserId());
+            cached.setUsername(loginUser.getUsername());
+            cached.setStatus(loginUser.getStatus());
+            cached.setDeptId(loginUser.getDeptId());
+            cached.setRoles(loginUser.getRoles());
+            cached.setPermissions(loginUser.getPermissions());
+
+            String userJson = objectMapper.writeValueAsString(cached);
             redisTemplate.opsForValue().set(
                     SecurityConstants.LOGIN_USER_KEY + loginUser.getUserId(),
                     userJson,
@@ -140,14 +150,28 @@ public class TokenService {
                 redisTemplate.delete(SecurityConstants.LOGIN_USER_KEY + userId);
             }
 
-            // Add token to blacklist with remaining TTL
-            long remainingTtl = jwtProperties.getExpire();
-            redisTemplate.opsForValue().set(
-                    SecurityConstants.TOKEN_BLACKLIST_PREFIX + token,
-                    "1",
-                    remainingTtl,
-                    TimeUnit.SECONDS
-            );
+            // Blacklist only for the token's remaining lifetime (no point
+            // keeping it beyond natural expiry — saves Redis memory)
+            long remainingMillis = claims.getExpiration().getTime() - System.currentTimeMillis();
+            if (remainingMillis > 0) {
+                redisTemplate.opsForValue().set(
+                        SecurityConstants.TOKEN_BLACKLIST_PREFIX + token,
+                        "1",
+                        remainingMillis,
+                        TimeUnit.MILLISECONDS
+                );
+            }
+        } catch (ExpiredJwtException e) {
+            // Token already expired: blacklisting is pointless, but the Redis
+            // session entry must still be cleaned up
+            Claims claims = e.getClaims();
+            if (claims != null) {
+                Long userId = claims.get("userId", Long.class);
+                if (userId != null) {
+                    redisTemplate.delete(SecurityConstants.LOGIN_USER_KEY + userId);
+                }
+            }
+            log.debug("Logout with expired token, session cache cleaned");
         } catch (Exception e) {
             log.warn("Failed to logout: {}", e.getMessage());
         }

@@ -11,7 +11,6 @@ public class JwtProperties {
 
     private String secret;
     private long expire = 86400;
-    private long refreshExpire = 604800;
     private String header = "Authorization";
     private String tokenPrefix = "Bearer ";
 }

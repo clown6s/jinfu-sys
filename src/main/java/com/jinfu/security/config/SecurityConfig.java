@@ -53,8 +53,8 @@ public class SecurityConfig {
                                 "/doc.html",
                                 "/error"
                         ).permitAll()
-                        // Static resources exposed
-                        .requestMatchers("/files/**").permitAll()
+                        // Static resources — must authenticate
+                        .requestMatchers("/files/**").authenticated()
                         // WebSocket endpoints
                         .requestMatchers("/ws/**").permitAll()
                         // All others need authentication

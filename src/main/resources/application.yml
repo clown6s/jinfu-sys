@@ -1,9 +1,12 @@
 server:
   port: 8080
+  shutdown: graceful
   servlet:
     context-path: /api
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
@@ -80,7 +83,6 @@ security:
   jwt:
     secret: ${JWT_SECRET:jinfu-dev-secret-key-must-be-at-least-256-bits-long-for-hs256}
     expire: 86400
-    refresh-expire: 604800
     header: Authorization
     token-prefix: "Bearer "
 
@@ -136,7 +138,7 @@ management:
       base-path: /actuator
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
       probes:
         enabled: true
   metrics:

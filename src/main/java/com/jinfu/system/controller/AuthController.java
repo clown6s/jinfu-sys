@@ -1,11 +1,15 @@
 package com.jinfu.system.controller;
 
 import com.jinfu.common.constant.SecurityConstants;
+import com.jinfu.common.exception.BusinessException;
 import com.jinfu.common.result.Result;
+import com.jinfu.common.result.ResultCode;
 import com.jinfu.form.mapper.FormDefinitionMapper;
 import com.jinfu.security.entity.LoginUser;
+import com.jinfu.security.service.LoginAttemptService;
 import com.jinfu.security.service.TokenService;
 import com.jinfu.system.entity.SysMenu;
+import com.jinfu.system.entity.SysUser;
 import com.jinfu.system.mapper.SysMenuMapper;
 import com.jinfu.system.mapper.SysRoleMapper;
 import com.jinfu.system.service.SysMenuService;
@@ -24,6 +28,7 @@ import org.flowable.engine.TaskService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,6 +43,7 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
+    private final LoginAttemptService loginAttemptService;
     private final SysMenuMapper sysMenuMapper;
     private final SysRoleMapper sysRoleMapper;
     private final SysUserMapper sysUserMapper;
@@ -67,12 +73,28 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "Login", description = "Username + password login, returns JWT token")
     public Result<Map<String, Object>> login(@RequestBody @Valid LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getUsername(),
-                        loginRequest.getPassword()
-                )
-        );
+        String username = loginRequest.getUsername();
+
+        // Brute-force protection: locked accounts are rejected before authentication
+        if (loginAttemptService.isLocked(username)) {
+            long minutes = loginAttemptService.getLockRemainingMinutes(username);
+            throw new BusinessException(ResultCode.UNAUTHORIZED.getCode(),
+                    "登录失败次数过多，账号已锁定，请 " + minutes + " 分钟后再试");
+        }
+
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            username,
+                            loginRequest.getPassword()
+                    )
+            );
+        } catch (AuthenticationException e) {
+            loginAttemptService.onLoginFail(username);
+            throw e;
+        }
+        loginAttemptService.onLoginSuccess(username);
 
         LoginUser loginUser = (LoginUser) authentication.getPrincipal();
 
@@ -107,10 +129,17 @@ public class AuthController {
         Map<String, Object> info = new HashMap<>();
         info.put("userId", loginUser.getUserId());
         info.put("username", loginUser.getUsername());
-        info.put("nickname", loginUser.getNickname());
-        info.put("avatar", loginUser.getAvatar());
-        info.put("email", loginUser.getEmail());
-        info.put("phone", loginUser.getPhone());
+
+        // Profile fields are loaded from DB — the Redis session cache holds
+        // authorization data only (userId/username/status/roles/permissions)
+        SysUser sysUser = sysUserMapper.selectById(loginUser.getUserId());
+        if (sysUser != null) {
+            info.put("nickname", sysUser.getNickname());
+            info.put("avatar", sysUser.getAvatar());
+            info.put("email", sysUser.getEmail());
+            info.put("phone", sysUser.getPhone());
+        }
+
         info.put("roles", loginUser.getRoles());
         info.put("permissions", loginUser.getPermissions());
 

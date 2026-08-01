@@ -11,6 +11,8 @@ public class SecurityConstants {
 
     public static final String TOKEN_BLACKLIST_PREFIX = "token:blacklist:";
     public static final String LOGIN_USER_KEY = "login:user:";
+    public static final String LOGIN_FAIL_PREFIX = "login:fail:";
+    public static final String LOGIN_LOCK_PREFIX = "login:lock:";
 
     public static final String ROLE_ADMIN = "admin";
 
