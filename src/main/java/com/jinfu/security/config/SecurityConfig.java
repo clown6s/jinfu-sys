@@ -76,7 +76,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authConfig) throws Exception {
+            AuthenticationConfiguration authConfig) {
         return authConfig.getAuthenticationManager();
     }
 }
