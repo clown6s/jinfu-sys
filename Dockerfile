@@ -1,5 +1,5 @@
 # ==================== Stage 1: Maven Build ====================
-FROM maven:3.9-eclipse-temurin-21-alpine AS build
+FROM maven:3.9.16-eclipse-temurin-21-alpine AS build
 WORKDIR /build
 
 # 先复制 pom.xml，利用 Docker 层缓存加速
@@ -11,7 +11,7 @@ COPY src ./src
 RUN mvn package -DskipTests -B -q
 
 # ==================== Stage 2: Runtime ====================
-FROM eclipse-temurin:21-jre-alpine AS runtime
+FROM azul/zulu-openjdk-alpine:21.0.11-jre-headless AS runtime
 
 # 安全：非 root 运行
 RUN addgroup -g 1000 jinfu && \
