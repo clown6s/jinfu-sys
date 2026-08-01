@@ -16,7 +16,7 @@ scrape_configs:
         labels:
           app: jinfu-sys
           env: prod
-          __path__: /var/log/app/*.log
+          __path__: /var/log/jinfu-sys/*.log
 
     pipeline_stages:
       # 解析 JSON 日志
@@ -34,9 +34,10 @@ scrape_configs:
       # 时间戳
       - timestamp:
           source: timestamp
-          format: "2006-01-02T15:04:05.000-0700"
+          format: "2006-01-02T15:04:05.000Z"
           fallback_formats:
-            - "2006-01-02T15:04:05.000Z"
+            - "2006-01-02T15:04:05.000-07:00"
+            - "2006-01-02T15:04:05.000-0700"
 
       # 日志级别标签
       - labels:

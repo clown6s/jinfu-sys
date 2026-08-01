@@ -24,7 +24,7 @@ route:
 receivers:
   - name: "default"
     webhook_configs:
-      - url: "${WECOM_WEBHOOK_URL}"
+      - url: "__WECOM_WEBHOOK_URL__"
         send_resolved: true
         message: |
           {
@@ -36,7 +36,7 @@ receivers:
 
   - name: "wecom-critical"
     webhook_configs:
-      - url: "${WECOM_WEBHOOK_URL}"
+      - url: "__WECOM_WEBHOOK_URL__"
         send_resolved: true
         message: |
           {
@@ -48,7 +48,7 @@ receivers:
 
   - name: "wecom-warning"
     webhook_configs:
-      - url: "${WECOM_WEBHOOK_URL}"
+      - url: "__WECOM_WEBHOOK_URL__"
         send_resolved: true
         message: |
           {

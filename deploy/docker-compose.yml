@@ -50,6 +50,7 @@ services:
       - DB_POOL_MIN=5
       - REDIS_POOL_MAX=16
       - SPRING_PROFILES_ACTIVE=prod
+      - TZ=Asia/Shanghai
       - LOG_PATH=/var/log/jinfu-sys
       - JAVA_OPTS=${JAVA_OPTS:--Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200}
     volumes:
@@ -256,7 +257,7 @@ services:
           memory: 32M
     volumes:
       - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
-      - app-logs:/var/log/app:ro
+      - app-logs:/var/log/jinfu-sys:ro
     command: -config.file=/etc/promtail/config.yml
     networks:
       - jinfu-net
@@ -304,12 +305,13 @@ services:
         reservations:
           memory: 32M
     command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
-      - "--storage.path=/alertmanager"
+      - sh
+      - -c
+      - 'sed -i "s|__WECOM_WEBHOOK_URL__|$$WECOM_WEBHOOK_URL|g" /etc/alertmanager/alertmanager.yml && exec alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager'
     environment:
       - WECOM_WEBHOOK_URL=${WECOM_WEBHOOK_URL}
     volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
       - alertmanager-data:/alertmanager
     ports:
       - "${ALERTMANAGER_PORT:-9093}:9093"
