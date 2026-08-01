@@ -1,0 +1,35 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: jinfu-prod
+
+# 告警规则文件
+rule_files:
+  - "/etc/prometheus/alert-rules.yml"
+
+# Alertmanager
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# 采集目标
+scrape_configs:
+  # ---- jinfu-sys 应用 ----
+  - job_name: "jinfu-sys"
+    metrics_path: "/api/actuator/prometheus"
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - app:8080
+        labels:
+          app: jinfu-sys
+          env: prod
+
+  # ---- Prometheus 自身 ----
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - localhost:9090

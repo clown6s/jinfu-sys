@@ -1,0 +1,53 @@
+groups:
+  - name: jinfu-sys-alerts
+    rules:
+
+      # ====== 服务存活 ======
+      - alert: ServiceDown
+        expr: up{job="jinfu-sys"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "jinfu-sys 服务宕机"
+          description: "{{ $labels.app }} 已停止响应超过 30 秒"
+
+      # ====== JVM 堆内存 ======
+      - alert: HighHeapUsage
+        expr: sum(jvm_memory_used_bytes{area="heap", application="jinfu-sys"}) / sum(jvm_memory_max_bytes{area="heap", application="jinfu-sys"}) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM 堆内存使用率超过 85%"
+          description: "当前使用率 {{ $value | humanizePercentage }}，已持续 5 分钟"
+
+      # ====== HTTP 5xx 错误率 ======
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_seconds_count{status=~"5..", application="jinfu-sys"}[1m]) / rate(http_server_requests_seconds_count{application="jinfu-sys"}[1m]) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 5xx 错误率超过 5%"
+          description: "{{ $labels.uri }} 错误率 {{ $value | humanizePercentage }}"
+
+      # ====== HTTP P99 延迟过高 ======
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{application="jinfu-sys"}[5m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "接口 P99 延迟超过 3 秒"
+          description: "{{ $labels.uri }} P99={{ $value }}s"
+
+      # ====== 磁盘使用率 (Prometheus 所在节点) ======
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes{fstype!="tmpfs"} - node_filesystem_avail_bytes{fstype!="tmpfs"}) / node_filesystem_size_bytes{fstype!="tmpfs"} > 0.80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "磁盘使用率超过 80%"
+          description: "{{ $labels.mountpoint }} 使用率 {{ $value | humanizePercentage }}"

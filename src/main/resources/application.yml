@@ -1,0 +1,161 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+  autoconfigure:
+    exclude:
+      - org.flowable.spring.boot.eventregistry.EventRegistryAutoConfiguration
+      - org.flowable.spring.boot.FlowableSecurityAutoConfiguration
+
+  # ---- 数据源 (开发默认值，生产通过环境变量覆盖) ----
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://10.211.55.5:3306/jinfu_sys?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:nfg!om,j^6453#decqx!109}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:8}
+      minimum-idle: ${DB_POOL_MIN:4}
+      idle-timeout: 300000
+      connection-timeout: 10000
+      max-lifetime: 1200000
+
+  # ---- Redis (开发默认值，生产通过环境变量覆盖) ----
+  data:
+    redis:
+      host: ${REDIS_HOST:10.211.55.5}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:1}
+      timeout: 10s
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX:8}
+          max-idle: 4
+          min-idle: 0
+          max-wait: 5s
+      password: ${REDIS_PASSWORD:mhkfu*h66!dlop09b6v53c}
+
+# ---- MinIO (开发默认值，生产通过环境变量覆盖) ----
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: ${MINIO_BUCKET:jinfu-sys}
+
+# ---- MyBatis-Plus ----
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.jinfu.**.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    call-setters-on-nulls: true
+  global-config:
+    banner: false
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# ---- CORS ----
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+# ---- JWT ----
+security:
+  jwt:
+    secret: ${JWT_SECRET:jinfu-dev-secret-key-must-be-at-least-256-bits-long-for-hs256}
+    expire: 86400
+    refresh-expire: 604800
+    header: Authorization
+    token-prefix: "Bearer "
+
+# ---- Flowable ----
+flowable:
+  check-process-definitions: true
+  history-level: full
+  async-executor-activate: true
+  database-schema-update: true
+
+# ---- Knife4j/Swagger (开发默认开启，生产通过环境变量关闭) ----
+knife4j:
+  enable: ${KNIFE4J_ENABLE:true}
+  setting:
+    language: zh_cn
+    enable-version: true
+    enable-swagger-models: true
+
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:true}
+  swagger-ui:
+    enabled: ${SPRINGDOC_SWAGGER_UI_ENABLED:true}
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: system
+      paths-to-match: /system/**
+      display-name: System Management
+    - group: flow
+      paths-to-match: /flow/**
+      display-name: Workflow
+    - group: form
+      paths-to-match: /form/**
+      display-name: Dynamic Form
+
+# ---- p6spy SQL 日志 (开发用，生产关闭) ----
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: ${P6SPY_ENABLE:true}
+      logging: slf4j
+      log-format: "%(executionTime)ms | %(category) | %(sqlSingleLine)"
+
+# ---- Actuator (开发默认全部暴露，生产通过环境变量限制) ----
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:*}
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: jinfu-sys
+    export:
+      prometheus:
+        enabled: true
+  health:
+    redis:
+      enabled: true
+    db:
+      enabled: true
+
+# ---- Logging ----
+logging:
+  level:
+    com.jinfu: ${LOGGING_LEVEL_COM_JINFU:debug}
+    org.flowable: ${LOGGING_LEVEL_FLOWABLE:info}
+    org.springframework.security: ${LOGGING_LEVEL_SPRING_SECURITY:info}
+    org.springframework: ${LOGGING_LEVEL_SPRING:warn}

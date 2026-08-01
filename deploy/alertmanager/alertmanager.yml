@@ -1,0 +1,67 @@
+global:
+  resolve_timeout: 5m
+
+# 根路由
+route:
+  receiver: "default"
+  group_by: ["alertname"]
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  routes:
+    # 紧急告警 → 企业微信 + 控制台
+    - match:
+        severity: critical
+      receiver: wecom-critical
+      repeat_interval: 15m
+    # 警告级别
+    - match:
+        severity: warning
+      receiver: wecom-warning
+      repeat_interval: 1h
+
+# 接收器
+receivers:
+  - name: "default"
+    webhook_configs:
+      - url: "${WECOM_WEBHOOK_URL}"
+        send_resolved: true
+        message: |
+          {
+            "msgtype": "markdown",
+            "markdown": {
+              "content": "### jinfu-sys 告警\n> **状态**: {{ .Status }}\n> **告警**: {{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}"
+            }
+          }
+
+  - name: "wecom-critical"
+    webhook_configs:
+      - url: "${WECOM_WEBHOOK_URL}"
+        send_resolved: true
+        message: |
+          {
+            "msgtype": "markdown",
+            "markdown": {
+              "content": "## 🚨 紧急告警\n> **状态**: <font color=\"warning\">{{ .Status | toUpper }}</font>\n{{ range .Alerts }}\n> **告警**: {{ .Annotations.summary }}\n> **详情**: {{ .Annotations.description }}\n> **时间**: {{ .StartsAt.Format \"2006-01-02 15:04:05\" }}\n{{ end }}"
+            }
+          }
+
+  - name: "wecom-warning"
+    webhook_configs:
+      - url: "${WECOM_WEBHOOK_URL}"
+        send_resolved: true
+        message: |
+          {
+            "msgtype": "markdown",
+            "markdown": {
+              "content": "## ⚠️ 警告\n> **状态**: {{ .Status | toUpper }}\n{{ range .Alerts }}\n> **告警**: {{ .Annotations.summary }}\n> **详情**: {{ .Annotations.description }}\n{{ end }}"
+            }
+          }
+
+# 抑制规则
+inhibit_rules:
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ["alertname"]

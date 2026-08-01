@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jinfu.system.mapper.SysMenuMapper">
+
+    <select id="selectPermsByUserId" resultType="java.lang.String">
+        SELECT DISTINCT m.perms
+        FROM sys_menu m
+        INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
+        INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+        WHERE ur.user_id = #{userId}
+          AND m.perms IS NOT NULL
+          AND m.perms != ''
+          AND m.status = 0
+          AND m.deleted = 0
+    </select>
+
+    <select id="selectMenuTreeByUserId" resultType="com.jinfu.system.entity.SysMenu">
+        SELECT DISTINCT m.*
+        FROM sys_menu m
+        INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
+        INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+        WHERE ur.user_id = #{userId}
+          AND m.menu_type IN ('M', 'C')
+          AND m.visible = 0
+          AND m.status = 0
+          AND m.deleted = 0
+        ORDER BY m.parent_id, m.sort
+    </select>
+
+    <select id="selectAllMenuTree" resultType="com.jinfu.system.entity.SysMenu">
+        SELECT * FROM sys_menu
+        WHERE menu_type IN ('M', 'C')
+          AND deleted = 0
+        ORDER BY parent_id, sort
+    </select>
+
+</mapper>

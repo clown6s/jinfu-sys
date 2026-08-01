@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jinfu.system.mapper.SysUserMapper">
+
+    <select id="selectByUsername" resultType="com.jinfu.system.entity.SysUser">
+        SELECT u.*, d.dept_name
+        FROM sys_user u
+        LEFT JOIN sys_dept d ON u.dept_id = d.id AND d.deleted = 0
+        WHERE u.username = #{username}
+          AND u.deleted = 0
+    </select>
+
+</mapper>

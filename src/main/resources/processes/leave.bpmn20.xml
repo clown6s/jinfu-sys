@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://flowable.org/bpmn">
+
+    <process id="leave" name="请假流程" isExecutable="true">
+
+        <!-- Start Event -->
+        <startEvent id="startEvent" name="开始"/>
+
+        <!-- Applicant submit task -->
+        <userTask id="submitTask" name="提交请假申请"
+                  flowable:assignee="${starter}"
+                  flowable:formKey="leave_form"/>
+
+        <!-- Department manager approval -->
+        <userTask id="deptManagerApproval" name="部门经理审批"
+                  flowable:candidateGroups="dept_manager"/>
+
+        <!-- Exclusive Gateway: Manager decision -->
+        <exclusiveGateway id="managerDecision" name="经理审批结果"/>
+
+        <!-- CEO approval (for leaves > 3 days) -->
+        <userTask id="ceoApproval" name="总经理审批"
+                  flowable:candidateGroups="ceo"/>
+
+        <!-- Exclusive Gateway: CEO decision -->
+        <exclusiveGateway id="ceoDecision" name="总经理审批结果"/>
+
+        <!-- Days check gateway -->
+        <exclusiveGateway id="daysCheck" name="请假天数判断"/>
+
+        <!-- End events -->
+        <endEvent id="endApproved" name="审批通过"/>
+        <endEvent id="endRejected" name="审批驳回"/>
+
+        <!-- Sequence flows -->
+        <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="submitTask"/>
+        <sequenceFlow id="flow2" sourceRef="submitTask" targetRef="deptManagerApproval"/>
+
+        <!-- Manager decision -->
+        <sequenceFlow id="flow3" sourceRef="deptManagerApproval" targetRef="managerDecision"/>
+        <sequenceFlow id="flow4" sourceRef="managerDecision" targetRef="daysCheck"
+                      name="通过">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${approve == true}]]>
+            </conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow5" sourceRef="managerDecision" targetRef="submitTask"
+                      name="驳回">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${approve == false}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+        <!-- Days check: > 3 days goes to CEO -->
+        <sequenceFlow id="flow6" sourceRef="daysCheck" targetRef="ceoApproval"
+                      name="请假>3天">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${days > 3}]]>
+            </conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow7" sourceRef="daysCheck" targetRef="endApproved"
+                      name="请假&lt;=3天">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${days <= 3}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+        <!-- CEO decision -->
+        <sequenceFlow id="flow8" sourceRef="ceoApproval" targetRef="ceoDecision"/>
+        <sequenceFlow id="flow9" sourceRef="ceoDecision" targetRef="endApproved"
+                      name="通过">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${approve == true}]]>
+            </conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow10" sourceRef="ceoDecision" targetRef="deptManagerApproval"
+                      name="驳回">
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${approve == false}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+    </process>
+
+    <!-- BPMNDI: Diagram interchange -->
+    <bpmndi:BPMNDiagram id="BPMNDiagram_leave">
+        <bpmndi:BPMNPlane id="BPMNPlane_leave" bpmnElement="leave">
+            <bpmndi:BPMNShape id="Shape_startEvent" bpmnElement="startEvent">
+                <omgdc:Bounds x="100" y="200" width="35" height="35"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Shape_submitTask" bpmnElement="submitTask">
+                <omgdc:Bounds x="200" y="185" width="120" height="65"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Shape_deptManagerApproval" bpmnElement="deptManagerApproval">
+                <omgdc:Bounds x="400" y="185" width="120" height="65"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Shape_managerDecision" bpmnElement="managerDecision">
+                <omgdc:Bounds x="580" y="195" width="40" height="40"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Shape_daysCheck" bpmnElement="daysCheck">
+                <omgdc:Bounds x="680" y="195" width="40" height="40"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Shape_ceoApproval" bpmnElement="ceoApproval">
+                <omgdc:Bounds x="780" y="185" width="120" height="65"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Shape_ceoDecision" bpmnElement="ceoDecision">
+                <omgdc:Bounds x="960" y="195" width="40" height="40"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Shape_endApproved" bpmnElement="endApproved">
+                <omgdc:Bounds x="1080" y="200" width="35" height="35"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Shape_endRejected" bpmnElement="endRejected">
+                <omgdc:Bounds x="680" y="400" width="35" height="35"/>
+            </bpmndi:BPMNShape>
+
+            <bpmndi:BPMNEdge id="Edge_flow1" bpmnElement="flow1">
+                <omgdi:waypoint x="135" y="217.5"/>
+                <omgdi:waypoint x="200" y="217.5"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Edge_flow2" bpmnElement="flow2">
+                <omgdi:waypoint x="320" y="217.5"/>
+                <omgdi:waypoint x="400" y="217.5"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Edge_flow3" bpmnElement="flow3">
+                <omgdi:waypoint x="520" y="217.5"/>
+                <omgdi:waypoint x="580" y="215"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Edge_flow4" bpmnElement="flow4">
+                <omgdi:waypoint x="620" y="215"/>
+                <omgdi:waypoint x="680" y="215"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Edge_flow5" bpmnElement="flow5">
+                <omgdi:waypoint x="600" y="235"/>
+                <omgdi:waypoint x="600" y="350"/>
+                <omgdi:waypoint x="260" y="350"/>
+                <omgdi:waypoint x="260" y="250"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Edge_flow6" bpmnElement="flow6">
+                <omgdi:waypoint x="720" y="215"/>
+                <omgdi:waypoint x="780" y="217.5"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Edge_flow7" bpmnElement="flow7">
+                <omgdi:waypoint x="720" y="215"/>
+                <omgdi:waypoint x="1080" y="217.5"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Edge_flow8" bpmnElement="flow8">
+                <omgdi:waypoint x="900" y="217.5"/>
+                <omgdi:waypoint x="960" y="215"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Edge_flow9" bpmnElement="flow9">
+                <omgdi:waypoint x="1000" y="215"/>
+                <omgdi:waypoint x="1080" y="217.5"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Edge_flow10" bpmnElement="flow10">
+                <omgdi:waypoint x="980" y="235"/>
+                <omgdi:waypoint x="980" y="320"/>
+                <omgdi:waypoint x="460" y="320"/>
+                <omgdi:waypoint x="460" y="250"/>
+            </bpmndi:BPMNEdge>
+        </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+
+</definitions>
