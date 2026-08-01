@@ -40,8 +40,9 @@ services:
       - DB_POOL_MAX=20
       - DB_POOL_MIN=5
       - REDIS_POOL_MAX=16
+      - SPRING_PROFILES_ACTIVE=prod
       - LOG_PATH=/var/log/jinfu-sys
-      - JAVA_OPTS=${JAVA_OPTS:--Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -DLOG_FILE_ENABLED=true}
+      - JAVA_OPTS=${JAVA_OPTS:--Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200}
     volumes:
       - app-logs:/var/log/jinfu-sys
     networks:
