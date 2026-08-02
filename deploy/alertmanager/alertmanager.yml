@@ -26,37 +26,16 @@ receivers:
     webhook_configs:
       - url: "__WECOM_WEBHOOK_URL__"
         send_resolved: true
-        message: |
-          {
-            "msgtype": "markdown",
-            "markdown": {
-              "content": "### jinfu-sys 告警\n> **状态**: {{ .Status }}\n> **告警**: {{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}"
-            }
-          }
 
   - name: "wecom-critical"
     webhook_configs:
       - url: "__WECOM_WEBHOOK_URL__"
         send_resolved: true
-        message: |
-          {
-            "msgtype": "markdown",
-            "markdown": {
-              "content": "## 🚨 紧急告警\n> **状态**: <font color=\"warning\">{{ .Status | toUpper }}</font>\n{{ range .Alerts }}\n> **告警**: {{ .Annotations.summary }}\n> **详情**: {{ .Annotations.description }}\n> **时间**: {{ .StartsAt.Format \"2006-01-02 15:04:05\" }}\n{{ end }}"
-            }
-          }
 
   - name: "wecom-warning"
     webhook_configs:
       - url: "__WECOM_WEBHOOK_URL__"
         send_resolved: true
-        message: |
-          {
-            "msgtype": "markdown",
-            "markdown": {
-              "content": "## ⚠️ 警告\n> **状态**: {{ .Status | toUpper }}\n{{ range .Alerts }}\n> **告警**: {{ .Annotations.summary }}\n> **详情**: {{ .Annotations.description }}\n{{ end }}"
-            }
-          }
 
 # 抑制规则
 inhibit_rules:
