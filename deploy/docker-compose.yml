@@ -240,7 +240,7 @@ services:
     networks:
       - jinfu-net
     healthcheck:
-      disable: true
+      test: ["NONE"]
     # distroless 镜像无 shell，无法执行 healthcheck
     # 健康状态通过 Loki API /ready 端点从外部检查
 
@@ -264,7 +264,7 @@ services:
     depends_on:
       - loki
     healthcheck:
-      disable: true
+      test: ["NONE"]
     # distroless 镜像无 shell，无法执行 healthcheck
 
   # ==================== Node Exporter (主机指标) ====================
