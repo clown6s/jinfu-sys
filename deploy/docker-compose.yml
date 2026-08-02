@@ -309,7 +309,7 @@ services:
     command:
       - /bin/sh
       - -c
-      - 'sed -i "s|__WECOM_WEBHOOK_URL__|$$WECOM_WEBHOOK_URL|g" /etc/alertmanager/alertmanager.yml && exec alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager'
+      - 'sed "s|__WECOM_WEBHOOK_URL__|$$WECOM_WEBHOOK_URL|g" /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml && exec alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager'
     environment:
       - WECOM_WEBHOOK_URL=${WECOM_WEBHOOK_URL}
     volumes:
