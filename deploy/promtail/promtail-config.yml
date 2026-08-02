@@ -22,7 +22,7 @@ scrape_configs:
       # 解析 JSON 日志
       - json:
           expressions:
-            timestamp: "@timestamp"
+            timestamp: '"@timestamp"'
             level: level
             message: message
             logger: logger_name
