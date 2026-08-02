@@ -305,8 +305,9 @@ services:
           memory: 128M
         reservations:
           memory: 32M
+    entrypoint: []
     command:
-      - sh
+      - /bin/sh
       - -c
       - 'sed -i "s|__WECOM_WEBHOOK_URL__|$$WECOM_WEBHOOK_URL|g" /etc/alertmanager/alertmanager.yml && exec alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager'
     environment:
