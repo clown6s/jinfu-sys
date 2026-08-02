@@ -51,7 +51,10 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/webjars/**",
                                 "/doc.html",
-                                "/error"
+                                "/error",
+                                // Actuator endpoints — required by Prometheus scraping / health probes
+                                "/api/actuator/health",
+                                "/api/actuator/prometheus"
                         ).permitAll()
                         // Static resources — must authenticate
                         .requestMatchers("/files/**").authenticated()
