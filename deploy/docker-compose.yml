@@ -239,6 +239,8 @@ services:
       - "${LOKI_PORT:-3100}:3100"
     networks:
       - jinfu-net
+    healthcheck:
+      disable: true
     # distroless 镜像无 shell，无法执行 healthcheck
     # 健康状态通过 Loki API /ready 端点从外部检查
 
@@ -261,6 +263,8 @@ services:
       - jinfu-net
     depends_on:
       - loki
+    healthcheck:
+      disable: true
     # distroless 镜像无 shell，无法执行 healthcheck
 
   # ==================== Node Exporter (主机指标) ====================
