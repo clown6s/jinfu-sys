@@ -78,3 +78,32 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE id = 1002);
 INSERT INTO sys_menu (id, parent_id, menu_name, path, component, perms, menu_type, icon, sort, visible, status, create_time)
 SELECT 1003, 1000, '我的日志', '/daily/my', 'daily/my/index', 'daily:report:my', 'C', 'file-text', 3, 1, 1, NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE id = 1003);
+
+-- ==============================================
+-- 审批管理菜单
+-- ==============================================
+
+-- 审批管理目录（如果尚未存在）
+INSERT INTO sys_menu (id, parent_id, menu_name, path, component, perms, menu_type, icon, sort, visible, status, create_time)
+SELECT 2000, 0, '审批管理', '/approval', NULL, NULL, 'M', 'form', 60, 1, 1, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE id = 2000);
+
+-- 审批模板菜单
+INSERT INTO sys_menu (id, parent_id, menu_name, path, component, perms, menu_type, icon, sort, visible, status, create_time)
+SELECT 2001, 2000, '审批模板', '/approval/template', 'approval/template/index', 'approval:template:list', 'C', 'form', 1, 1, 1, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE id = 2001);
+
+-- 发起审批菜单
+INSERT INTO sys_menu (id, parent_id, menu_name, path, component, perms, menu_type, icon, sort, visible, status, create_time)
+SELECT 2002, 2000, '发起审批', '/approval/start', 'approval/start/index', 'approval:start:submit', 'C', 'form', 2, 1, 1, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE id = 2002);
+
+-- 待办审批菜单
+INSERT INTO sys_menu (id, parent_id, menu_name, path, component, perms, menu_type, icon, sort, visible, status, create_time)
+SELECT 2003, 2000, '待办审批', '/approval/todo', 'approval/todo/index', 'approval:todo:list', 'C', 'form', 3, 1, 1, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE id = 2003);
+
+-- 我的审批菜单
+INSERT INTO sys_menu (id, parent_id, menu_name, path, component, perms, menu_type, icon, sort, visible, status, create_time)
+SELECT 2004, 2000, '我的审批', '/approval/my', 'approval/my/index', 'approval:my:list', 'C', 'form', 4, 1, 1, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE id = 2004);
