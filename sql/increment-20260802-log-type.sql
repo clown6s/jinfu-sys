@@ -4,24 +4,40 @@
 -- 说明: 新增 log_type 表，扩展 daily_form_config 和 daily_report 支持多日志类型
 -- ==============================================
 
+-- 0. 创建审批流程模板表（如果尚未存在）
+CREATE TABLE IF NOT EXISTS sys_process_template (
+    id              BIGINT          PRIMARY KEY COMMENT '主键ID',
+    template_name   VARCHAR(100)    NOT NULL COMMENT '模板名称',
+    description     VARCHAR(500)    DEFAULT NULL COMMENT '描述',
+    dept_id         BIGINT          DEFAULT NULL COMMENT '所属部门ID（NULL=全公司可用）',
+    form_id         BIGINT          DEFAULT NULL COMMENT '关联表单定义ID',
+    step_chain      TEXT            DEFAULT NULL COMMENT '审批步骤链 JSON',
+    status          TINYINT         DEFAULT 0 COMMENT '状态（0=启用 1=停用）',
+    create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    create_by       BIGINT          DEFAULT NULL COMMENT '创建人',
+    update_by       BIGINT          DEFAULT NULL COMMENT '更新人',
+    deleted         TINYINT         DEFAULT 0 COMMENT '逻辑删除标志'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='审批流程模板表';
+
 -- 1. 创建日志类型表
 CREATE TABLE IF NOT EXISTS log_type (
     id              BIGINT          PRIMARY KEY COMMENT '主键ID',
-    type_name       VARCHAR(50)     NOT NULL COMMENT '类型名称（如：日报、周报、月报）',
-    type_code       VARCHAR(50)     NOT NULL COMMENT '类型编码（如：daily, weekly, monthly）',
+    name            VARCHAR(50)     NOT NULL COMMENT '类型名称（如：日报、周报、月报）',
+    code            VARCHAR(50)     NOT NULL COMMENT '类型编码（如：daily, weekly, monthly）',
     description     VARCHAR(200)    DEFAULT NULL COMMENT '描述',
-    sort            INT             DEFAULT 0 COMMENT '排序',
+    sort_order      INT             DEFAULT 0 COMMENT '排序',
     enabled         TINYINT         DEFAULT 1 COMMENT '启用状态（0=停用 1=启用）',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     create_by       BIGINT          DEFAULT NULL COMMENT '创建人',
     update_by       BIGINT          DEFAULT NULL COMMENT '更新人',
     deleted         TINYINT         DEFAULT 0 COMMENT '逻辑删除标志',
-    UNIQUE KEY uk_type_code (type_code)
+    UNIQUE KEY uk_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='日志类型表';
 
 -- 2. 插入默认日志类型
-INSERT INTO log_type (id, type_name, type_code, description, sort, enabled) VALUES
+INSERT INTO log_type (id, name, code, description, sort_order, enabled) VALUES
 (1, '日报', 'daily', '每日工作日报', 1, 1),
 (2, '周报', 'weekly', '每周工作周报', 2, 1),
 (3, '月报', 'monthly', '每月工作月报', 3, 1);

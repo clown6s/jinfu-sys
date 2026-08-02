@@ -29,6 +29,11 @@ public class MessageServiceImpl
 
     @Override
     public void sendToUser(Long userId, String msgType, String title, String content, Long bizId) {
+        sendToUser(userId, msgType, title, content, bizId, null);
+    }
+
+    @Override
+    public void sendToUser(Long userId, String msgType, String title, String content, Long bizId, Map<String, Object> extra) {
         // 1. 落库（离线/刷新页面后仍可查）
         SysMessage message = new SysMessage();
         message.setUserId(userId);
@@ -50,6 +55,10 @@ public class MessageServiceImpl
             payload.put("bizId", bizId);
             payload.put("readFlag", 0);
             payload.put("timestamp", System.currentTimeMillis());
+            // 扩展数据（如表单数据、Schema等）
+            if (extra != null && !extra.isEmpty()) {
+                payload.putAll(extra);
+            }
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(userId), "/queue/notifications", payload);
         } catch (Exception e) {

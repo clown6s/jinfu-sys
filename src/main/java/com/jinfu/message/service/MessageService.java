@@ -19,6 +19,12 @@ public interface MessageService extends IService<SysMessage> {
     void sendToUser(Long userId, String msgType, String title, String content, Long bizId);
 
     /**
+     * 发送站内消息（带扩展数据）：落库 + WebSocket 实时推送
+     * @param extra 扩展数据（如表单数据、Schema等），会一并推送给客户端
+     */
+    void sendToUser(Long userId, String msgType, String title, String content, Long bizId, java.util.Map<String, Object> extra);
+
+    /**
      * 分页查询我的消息（可按已读/未读过滤）
      */
     IPage<SysMessage> pageMessages(Page<SysMessage> page, Long userId, Integer readFlag);

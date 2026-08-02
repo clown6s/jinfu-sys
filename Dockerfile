@@ -17,8 +17,8 @@ FROM azul/zulu-openjdk-alpine:21.0.11-jre-headless AS runtime
 RUN addgroup -g 1000 jinfu && \
     adduser -u 1000 -G jinfu -D jinfu
 
-# 运行时依赖（wget 用于 HEALTHCHECK）
-RUN apk add --no-cache wget
+# 运行时依赖（curl 用于 HEALTHCHECK）
+RUN apk add --no-cache curl
 
 # 日志目录
 RUN mkdir -p /var/log/jinfu-sys && chown -R jinfu:jinfu /var/log/jinfu-sys
@@ -30,7 +30,7 @@ COPY --from=build /build/target/*.jar app.jar
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-    CMD wget -qO- http://localhost:8080/api/actuator/health || exit 1
+    CMD curl -fsS http://localhost:8080/api/actuator/health || exit 1
 
 USER jinfu:jinfu
 

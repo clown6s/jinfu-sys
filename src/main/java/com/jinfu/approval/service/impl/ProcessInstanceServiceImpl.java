@@ -451,14 +451,30 @@ public class ProcessInstanceServiceImpl
     }
 
     /**
-     * 发送待办通知给节点审批人（落库 + WS 推送）
+     * 发送待办通知给节点审批人（落库 + WS 推送表单数据）
      */
     private void sendNotification(SysApprovalNode node) {
         if (node.getApproverId() != null && node.getApproverId() > 0) {
             SysProcessInstance instance = getById(node.getInstanceId());
             String msg = String.format("您有新的审批待办：【%s】—— %s", instance.getTitle(), node.getStepName());
+
+            // 组装扩展数据：表单数据 + Schema + 审批节点信息
+            Map<String, Object> extra = new HashMap<>();
+            extra.put("bizType", "approval");
+            extra.put("instanceId", instance.getId());
+            extra.put("nodeId", node.getId());
+            extra.put("stepName", node.getStepName());
+            extra.put("stepOrder", node.getStepOrder());
+            extra.put("approverType", node.getApproverType());
+            extra.put("formId", instance.getFormId());
+            extra.put("formData", instance.getFormData());
+            extra.put("formSchema", instance.getFormSchemaSnapshot());
+            extra.put("initiatorId", instance.getInitiatorId());
+            extra.put("initiatorName", instance.getInitiatorName());
+            extra.put("title", instance.getTitle());
+
             messageService.sendToUser(node.getApproverId(), MessageService.TYPE_APPROVAL,
-                    "新的审批待办", msg, instance.getId());
+                    "新的审批待办", msg, instance.getId(), extra);
         }
     }
 
