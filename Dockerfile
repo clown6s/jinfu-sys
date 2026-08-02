@@ -37,7 +37,7 @@ USER jinfu:jinfu
 EXPOSE 8080
 
 # JVM 参数可通过 JAVA_OPTS 环境变量覆盖
-ENTRYPOINT exec java \
-    ${JAVA_OPTS:--Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200} \
-    -Djava.security.egd=file:/dev/./urandom \
-    -jar app.jar
+ENTRYPOINT ["java", \
+    "-Xms256m", "-Xmx512m", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=200", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "-jar", "app.jar"]
