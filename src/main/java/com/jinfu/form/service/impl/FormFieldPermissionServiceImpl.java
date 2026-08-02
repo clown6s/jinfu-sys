@@ -22,12 +22,12 @@ public class FormFieldPermissionServiceImpl
     @Transactional(rollbackFor = Exception.class)
     public void savePermissions(Long formId, String procDefId, String nodeId,
                                 List<FieldPermItem> items) {
-        // Delete existing permissions for this form+node
+        // 删除该表单+节点已有权限
         this.remove(new LambdaQueryWrapper<FormFieldPermission>()
                 .eq(FormFieldPermission::getFormId, formId)
                 .eq(FormFieldPermission::getNodeId, nodeId));
 
-        // Save new permissions
+        // 保存新权限
         if (items != null && !items.isEmpty()) {
             List<FormFieldPermission> entities = new ArrayList<>();
             for (FieldPermItem item : items) {

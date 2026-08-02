@@ -201,17 +201,17 @@ public class FlowProcessServiceImpl implements FlowProcessService {
             throw new BusinessException(ResultCode.TASK_NOT_FOUND);
         }
 
-        // Add comment
+        // 添加审批意见
         if (comment != null && !comment.isEmpty()) {
             taskService.addComment(taskId, task.getProcessInstanceId(), comment);
         }
 
-        // Set variables
+        // 设置流程变量
         if (variables != null) {
             taskService.setVariables(taskId, variables);
         }
 
-        // If unassigned, claim first
+        // 若未签收，先签收
         if (task.getAssignee() == null) {
             taskService.claim(taskId, userId);
         }
@@ -233,13 +233,13 @@ public class FlowProcessServiceImpl implements FlowProcessService {
             taskService.addComment(taskId, task.getProcessInstanceId(), comment);
         }
 
-        // Reject by moving back to the previous user task
-        // Find the start event of the process and go back
+        // 驳回：回退到上一个用户任务
+        // 找到流程开始事件并回退
         Map<String, Object> variables = new HashMap<>();
         variables.put("rejected", true);
         variables.put("rejectedBy", getLoginUser().getUsername());
 
-        // Simple reject: re-assign to the process starter
+        // 简单驳回：重新分配给流程发起人
         var processInstance = runtimeService.createProcessInstanceQuery()
                 .processInstanceId(task.getProcessInstanceId())
                 .singleResult();
@@ -248,7 +248,7 @@ public class FlowProcessServiceImpl implements FlowProcessService {
             taskService.addComment(taskId, task.getProcessInstanceId(), "REJECT: " + comment);
         }
 
-        // Reject to the starter — create a user task for restart
+        // 驳回给发起人——创建用户任务供重新提交
         String starterUsername = (String) runtimeService.getVariable(
                 task.getProcessInstanceId(), "starter");
         taskService.delegateTask(taskId, starterUsername);

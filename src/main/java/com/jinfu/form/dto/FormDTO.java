@@ -1,3 +1,3 @@
 package com.jinfu.form.dto;
 
-// Moved to FormDefinitionDTO.java
+// 已迁移至 FormDefinitionDTO.java

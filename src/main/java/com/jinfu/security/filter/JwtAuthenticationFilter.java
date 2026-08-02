@@ -41,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (Exception e) {
             log.warn("JWT filter exception: {}", e.getMessage());
-            // Don't throw here - let the security chain handle 401
+            // 此处不抛异常，让安全链处理 401
         }
 
         filterChain.doFilter(request, response);

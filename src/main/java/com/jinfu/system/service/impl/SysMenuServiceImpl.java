@@ -47,10 +47,10 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         if (menus == null || menus.isEmpty()) {
             return List.of();
         }
-        // Sort by sort order for consistent rendering
+        // 按排序号排序，保证渲染顺序一致
         menus.sort(Comparator.comparing(SysMenu::getSort, Comparator.nullsLast(Comparator.naturalOrder())));
 
-        // Find root nodes (parentId is null or 0)
+        // 找出根节点（parentId 为 null 或 0）
         List<SysMenu> roots = menus.stream()
                 .filter(m -> m.getParentId() == null || m.getParentId() == 0)
                 .collect(Collectors.toList());
@@ -64,10 +64,10 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void insertMenu(SysMenu menu) {
-        // Duplicate check
+        // 重复性校验
         checkDuplicate(menu, null);
 
-        // Set default values
+        // 设置默认值
         if (menu.getVisible() == null) {
             menu.setVisible(0);
         }
@@ -80,20 +80,20 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateMenu(SysMenu menu) {
-        // Existence check
+        // 存在性校验
         SysMenu existing = this.getById(menu.getId());
         if (existing == null) {
             throw new BusinessException(ResultCode.DATA_NOT_EXIST,
                     "Menu not found: " + menu.getId());
         }
 
-        // Prevent setting itself as parent
+        // 禁止将自身设为父节点
         if (menu.getParentId() != null && menu.getParentId().equals(menu.getId())) {
             throw new BusinessException(ResultCode.BAD_REQUEST,
                     "A menu cannot be its own parent");
         }
 
-        // Duplicate check (excluding current id)
+        // 重复性校验（排除当前记录）
         checkDuplicate(menu, menu.getId());
 
         this.updateById(menu);
@@ -102,7 +102,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteMenu(Long menuId) {
-        // Check no children
+        // 校验无子节点
         long childCount = this.count(new LambdaQueryWrapper<SysMenu>()
                 .eq(SysMenu::getParentId, menuId));
         if (childCount > 0) {

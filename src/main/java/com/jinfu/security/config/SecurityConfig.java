@@ -42,7 +42,7 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
+                        // 公开接口
                         .requestMatchers(
                                 SecurityConstants.LOGIN_URL,
                                 SecurityConstants.CAPTCHA_URL,
@@ -52,15 +52,15 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/doc.html",
                                 "/error",
-                                // Actuator endpoints — required by Prometheus scraping / health probes
+                                // Actuator 端点 —— Prometheus 采集 / 健康探针所需
                                 "/actuator/health",
                                 "/actuator/prometheus"
                         ).permitAll()
-                        // Static resources — must authenticate
+                        // 静态资源 —— 需认证
                         .requestMatchers("/files/**").authenticated()
-                        // WebSocket endpoints
+                        // WebSocket 端点
                         .requestMatchers("/ws/**").permitAll()
-                        // All others need authentication
+                        // 其余接口均需认证
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

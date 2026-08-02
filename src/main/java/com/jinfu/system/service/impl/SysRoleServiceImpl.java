@@ -45,7 +45,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void insertRole(SysRoleDTO roleDTO) {
-        // Duplicate role key check
+        // 角色标识重复校验
         boolean exists = this.count(new LambdaQueryWrapper<SysRole>()
                 .eq(SysRole::getRoleKey, roleDTO.getRoleKey())) > 0;
         if (exists) {
@@ -64,7 +64,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             throw new BusinessException(ResultCode.DATA_NOT_EXIST,
                     "Role not found: " + roleDTO.getId());
         }
-        // Duplicate role key check (excluding current id)
+        // 角色标识重复校验（排除当前记录）
         SysRole duplicate = this.getOne(new LambdaQueryWrapper<SysRole>()
                 .eq(SysRole::getRoleKey, roleDTO.getRoleKey())
                 .ne(SysRole::getId, roleDTO.getId()));
@@ -73,7 +73,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
                     "Role key already exists: " + roleDTO.getRoleKey());
         }
         this.updateById(roleDTO);
-        // Delete old role-menu relations, then insert new ones
+        // 删除旧角色-菜单关联，再插入新的
         sysRoleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
                 .eq(SysRoleMenu::getRoleId, roleDTO.getId()));
         insertRoleMenu(roleDTO.getId(), roleDTO.getMenuIds());
@@ -82,7 +82,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteRole(Long roleId) {
-        // Check no users assigned to the role
+        // 校验该角色下无用户
         long userCount = sysUserRoleMapper.selectCount(new LambdaQueryWrapper<SysUserRole>()
                 .eq(SysUserRole::getRoleId, roleId));
         if (userCount > 0) {
@@ -90,7 +90,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
                     "Role has assigned users, cannot delete");
         }
         this.removeById(roleId);
-        // Delete role-menu relations
+        // 删除角色-菜单关联
         sysRoleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
                 .eq(SysRoleMenu::getRoleId, roleId));
     }

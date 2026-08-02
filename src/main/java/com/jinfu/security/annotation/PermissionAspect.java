@@ -33,7 +33,7 @@ public class PermissionAspect {
             throw new BusinessException(ResultCode.UNAUTHORIZED);
         }
 
-        // Admin bypasses all permission checks
+        // admin 绕过所有权限校验
         Set<String> roles = loginUser.getRoles();
         if (roles != null && roles.contains("admin")) {
             return joinPoint.proceed();

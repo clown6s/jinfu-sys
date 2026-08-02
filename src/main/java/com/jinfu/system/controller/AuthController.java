@@ -75,7 +75,7 @@ public class AuthController {
     public Result<Map<String, Object>> login(@RequestBody @Valid LoginRequest loginRequest) {
         String username = loginRequest.getUsername();
 
-        // Brute-force protection: locked accounts are rejected before authentication
+        // 暴力破解防护：锁定账号在认证前直接拒绝
         if (loginAttemptService.isLocked(username)) {
             long minutes = loginAttemptService.getLockRemainingMinutes(username);
             throw new BusinessException(ResultCode.UNAUTHORIZED.getCode(),
@@ -141,7 +141,7 @@ public class AuthController {
         info.put("roles", loginUser.getRoles());
         info.put("permissions", loginUser.getPermissions());
 
-        // Build menu tree
+        // 构建菜单树
         List<SysMenu> flatMenus = sysMenuMapper.selectMenuTreeByUserId(loginUser.getUserId());
         List<SysMenu> menus = sysMenuService.buildMenuTree(flatMenus);
         info.put("menus", menus);

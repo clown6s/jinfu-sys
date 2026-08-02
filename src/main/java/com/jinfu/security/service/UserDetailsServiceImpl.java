@@ -42,11 +42,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         LoginUser loginUser = LoginUser.from(user);
 
-        // Load roles
+        // 加载角色
         Set<String> roles = sysRoleMapper.selectRoleKeysByUserId(user.getId());
         loginUser.setRoles(roles);
 
-        // Load permissions
+        // 加载权限
         Set<String> permissions = sysMenuMapper.selectPermsByUserId(user.getId());
         loginUser.setPermissions(permissions);
 

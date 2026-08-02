@@ -62,7 +62,7 @@ public class FormDefinitionServiceImpl
     @Transactional(rollbackFor = Exception.class)
     public void update(FormDefinition formDef) {
         FormDefinition existing = getById(formDef.getId());
-        // If key is being changed, check uniqueness
+        // 若 key 变更，校验唯一性
         if (StringUtils.hasText(formDef.getFormKey())
                 && !formDef.getFormKey().equals(existing.getFormKey())) {
             if (lambdaQuery().eq(FormDefinition::getFormKey, formDef.getFormKey()).exists()) {
@@ -70,7 +70,7 @@ public class FormDefinitionServiceImpl
                         "Form key already exists: " + formDef.getFormKey());
             }
         }
-        // If schema changed and form is published, bump version
+        // 若 schema 变更且表单已发布，版本号加一
         if (StringUtils.hasText(formDef.getSchemaJson())
                 && existing.getStatus() == 1
                 && !formDef.getSchemaJson().equals(existing.getSchemaJson())) {

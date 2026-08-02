@@ -56,9 +56,9 @@ public class TokenService {
                 .signWith(getSigningKey())
                 .compact();
 
-        // Cache a trimmed LoginUser in Redis: authorization fields only.
-        // PII (nickname/avatar/email/phone) is NOT cached — profile endpoints
-        // load those from the database to limit exposure on Redis compromise.
+        // 将精简后的 LoginUser 缓存到 Redis：仅含授权字段
+        // PII（昵称/头像/邮箱/手机号）不缓存——个人信息接口从数据库加载，防止 Redis 泄露风险
+        // 从数据库加载，降低 Redis 泄露后的信息暴露面
         try {
             LoginUser cached = new LoginUser();
             cached.setUserId(loginUser.getUserId());
@@ -87,12 +87,12 @@ public class TokenService {
             return null;
         }
 
-        // Remove prefix
+        // 移除前缀
         if (token.startsWith(jwtProperties.getTokenPrefix())) {
             token = token.substring(jwtProperties.getTokenPrefix().length());
         }
 
-        // Check blacklist
+        // 检查黑名单
         if (isTokenBlacklisted(token)) {
             log.warn("Token is blacklisted");
             throw new BusinessException(ResultCode.TOKEN_EXPIRED);
@@ -110,7 +110,7 @@ public class TokenService {
                 return null;
             }
 
-            // Load from Redis
+            // 从 Redis 加载
             String userJson = redisTemplate.opsForValue()
                     .get(SecurityConstants.LOGIN_USER_KEY + userId);
             if (userJson == null) {
@@ -150,8 +150,8 @@ public class TokenService {
                 redisTemplate.delete(SecurityConstants.LOGIN_USER_KEY + userId);
             }
 
-            // Blacklist only for the token's remaining lifetime (no point
-            // keeping it beyond natural expiry — saves Redis memory)
+            // 黑名单仅保留 token 剩余有效期（超过自然过期无意义——节省 Redis 内存）
+            // 超过自然过期无意义——节省 Redis 内存）
             long remainingMillis = claims.getExpiration().getTime() - System.currentTimeMillis();
             if (remainingMillis > 0) {
                 redisTemplate.opsForValue().set(
@@ -162,8 +162,8 @@ public class TokenService {
                 );
             }
         } catch (ExpiredJwtException e) {
-            // Token already expired: blacklisting is pointless, but the Redis
-            // session entry must still be cleaned up
+            // Token 已过期：加黑名单无意义，但 Redis
+            // 会话条目仍需清理
             Claims claims = e.getClaims();
             if (claims != null) {
                 Long userId = claims.get("userId", Long.class);
