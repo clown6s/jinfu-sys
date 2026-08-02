@@ -40,8 +40,8 @@ public class DailyReport extends BaseEntity {
     /** submitted=已提交 pending=审批中 approved=已通过 rejected=已驳回 */
     private String status;
 
-    /** 关联审批实例ID（sys_process_instance.id） */
-    private Long approvalInstId;
+    /** 关联 Flowable 流程实例ID */
+    private String approvalInstId;
 
     /** 提交时间 */
     private LocalDateTime submitTime;

@@ -35,12 +35,13 @@ public class DailyReportVO {
     private String reportTime;
     private Long processTemplateId;
     private String templateName;
+    private String processKey;
 
     /** 填报日期与数据 */
     private LocalDate reportDate;
     private String dataJson;
     private String status;
-    private Long approvalInstId;
+    private String approvalInstId;
     private LocalDateTime submitTime;
 
     /** 今日是否已提交（my-form 查询用） */

@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.jinfu.approval.entity.SysProcessTemplate;
-import com.jinfu.approval.mapper.SysProcessTemplateMapper;
 import com.jinfu.common.exception.BusinessException;
 import com.jinfu.common.result.ResultCode;
 import com.jinfu.daily.dto.DailyConfigVO;
@@ -14,6 +12,8 @@ import com.jinfu.daily.entity.LogType;
 import com.jinfu.daily.mapper.DailyFormConfigMapper;
 import com.jinfu.daily.mapper.LogTypeMapper;
 import com.jinfu.daily.service.DailyFormConfigService;
+import com.jinfu.flowable.entity.ProcessDesign;
+import com.jinfu.flowable.service.ProcessDesignService;
 import com.jinfu.form.entity.FormDefinition;
 import com.jinfu.form.mapper.FormDefinitionMapper;
 import com.jinfu.system.entity.SysDept;
@@ -35,7 +35,7 @@ public class DailyFormConfigServiceImpl
 
     private final SysDeptMapper deptMapper;
     private final FormDefinitionMapper formDefinitionMapper;
-    private final SysProcessTemplateMapper templateMapper;
+    private final ProcessDesignService processDesignService;
     private final LogTypeMapper logTypeMapper;
 
     @Override
@@ -43,7 +43,24 @@ public class DailyFormConfigServiceImpl
         LambdaQueryWrapper<DailyFormConfig> wrapper = new LambdaQueryWrapper<DailyFormConfig>()
                 .orderByAsc(DailyFormConfig::getDeptId);
         IPage<DailyFormConfig> resultPage = page(page, wrapper);
-        return resultPage.convert(this::toVO);
+        IPage<DailyConfigVO> voPage = resultPage.convert(this::toVO);
+        // keyword 在 VO 层过滤（匹配部门名、日志类型名、表单名）
+        if (StringUtils.hasText(keyword)) {
+            String kw = keyword.trim().toLowerCase();
+            List<DailyConfigVO> filtered = voPage.getRecords().stream()
+                    .filter(vo -> containsIgnoreCase(vo.getDeptName(), kw)
+                            || containsIgnoreCase(vo.getLogTypeName(), kw)
+                            || containsIgnoreCase(vo.getFormName(), kw)
+                            || containsIgnoreCase(vo.getTemplateName(), kw))
+                    .toList();
+            voPage.setRecords(filtered);
+            voPage.setTotal(filtered.size());
+        }
+        return voPage;
+    }
+
+    private boolean containsIgnoreCase(String text, String keyword) {
+        return text != null && text.toLowerCase().contains(keyword);
     }
 
     @Override
@@ -111,6 +128,7 @@ public class DailyFormConfigServiceImpl
         vo.setDeptId(config.getDeptId());
         vo.setFormId(config.getFormId());
         vo.setProcessTemplateId(config.getProcessTemplateId());
+        vo.setProcessKey(config.getProcessKey());
         vo.setReportTime(config.getReportTime());
         vo.setEnabled(config.getEnabled());
 
@@ -126,9 +144,14 @@ public class DailyFormConfigServiceImpl
             FormDefinition formDef = formDefinitionMapper.selectById(config.getFormId());
             vo.setFormName(formDef != null ? formDef.getName() : null);
         }
-        if (config.getProcessTemplateId() != null) {
-            SysProcessTemplate template = templateMapper.selectById(config.getProcessTemplateId());
-            vo.setTemplateName(template != null ? template.getTemplateName() : null);
+        // 通过 processKey 查流程设计名称展示
+        if (config.getProcessKey() != null && !config.getProcessKey().isEmpty()) {
+            ProcessDesign design = processDesignService.getOne(
+                    new LambdaQueryWrapper<ProcessDesign>()
+                            .eq(ProcessDesign::getProcessKey, config.getProcessKey())
+                            .orderByDesc(ProcessDesign::getVersion)
+                            .last("LIMIT 1"));
+            vo.setTemplateName(design != null ? design.getProcessName() : config.getProcessKey());
         }
         return vo;
     }

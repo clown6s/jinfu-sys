@@ -35,7 +35,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
-                .addInterceptors(jwtHandshakeInterceptor)
-                .withSockJS(); // 降级支持
+                .addInterceptors(jwtHandshakeInterceptor); // 前端用原生 WebSocket 直连，不需要 SockJS 降级
     }
 }

@@ -17,6 +17,7 @@ public class DailyConfigVO {
     private String formName;
     private Long processTemplateId;
     private String templateName;
+    private String processKey;
     private String reportTime;
     private Integer enabled;
 }

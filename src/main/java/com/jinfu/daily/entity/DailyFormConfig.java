@@ -26,8 +26,11 @@ public class DailyFormConfig extends BaseEntity {
     @NotNull(message = "请选择日志表单")
     private Long formId;
 
-    /** 关联审批模板ID（NULL=日报不需审批） */
+    /** 关联审批模板ID（NULL=日报不需审批；过渡期兼容旧自研审批模板表） */
     private Long processTemplateId;
+
+    /** Flowable 流程定义Key（BPMN process id）；配置后日报走 Flowable 审批 */
+    private String processKey;
 
     /** 填报截止时间 HH:mm */
     private String reportTime;

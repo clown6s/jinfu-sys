@@ -31,7 +31,7 @@ public class DailyReportController {
     @RequiresPermission("daily:report:list")
     @Operation(summary = "我的日志表单（返回部门配置的表单 Schema 与今日提交状态）")
     public Result<DailyReportVO> myForm(
-            @RequestParam Long logTypeId,
+            @RequestParam(name = "logTypeId") Long logTypeId,
             @AuthenticationPrincipal LoginUser loginUser) {
         return Result.success(reportService.myForm(
                 loginUser.getUserId(), loginUser.getDeptId(), logTypeId));
@@ -51,9 +51,9 @@ public class DailyReportController {
     @RequiresPermission("daily:report:list")
     @Operation(summary = "我的日志历史（可按类型筛选）")
     public Result<IPage<DailyReportVO>> myReports(
-            @RequestParam(defaultValue = "1") int pageNum,
-            @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) Long logTypeId,
+            @RequestParam(name = "pageNum", defaultValue = "1") int pageNum,
+            @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
+            @RequestParam(name = "logTypeId", required = false) Long logTypeId,
             @AuthenticationPrincipal LoginUser loginUser) {
         Page<DailyReport> page = new Page<>(pageNum, pageSize);
         return Result.success(reportService.myReports(page, loginUser.getUserId(), logTypeId));

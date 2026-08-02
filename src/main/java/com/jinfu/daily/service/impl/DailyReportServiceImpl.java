@@ -5,11 +5,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.jinfu.approval.dto.StartProcessRequest;
-import com.jinfu.approval.entity.SysProcessTemplate;
-import com.jinfu.approval.event.ApprovalFinishedEvent;
-import com.jinfu.approval.mapper.SysProcessTemplateMapper;
-import com.jinfu.approval.service.ProcessInstanceService;
 import com.jinfu.common.exception.BusinessException;
 import com.jinfu.common.result.ResultCode;
 import com.jinfu.daily.dto.DailyReportVO;
@@ -21,6 +16,9 @@ import com.jinfu.daily.mapper.DailyFormConfigMapper;
 import com.jinfu.daily.mapper.DailyReportMapper;
 import com.jinfu.daily.mapper.LogTypeMapper;
 import com.jinfu.daily.service.DailyReportService;
+import com.jinfu.flowable.entity.ApprovalRequest;
+import com.jinfu.flowable.event.ApprovalFinishedEvent;
+import com.jinfu.flowable.service.ApprovalBridgeService;
 import com.jinfu.form.entity.FormDefinition;
 import com.jinfu.form.mapper.FormDefinitionMapper;
 import com.jinfu.system.entity.SysDept;
@@ -30,9 +28,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 
 @Slf4j
 @Service
@@ -44,9 +44,8 @@ public class DailyReportServiceImpl
     private final DailyFormConfigMapper configMapper;
     private final FormDefinitionMapper formDefinitionMapper;
     private final SysDeptMapper deptMapper;
-    private final SysProcessTemplateMapper templateMapper;
     private final LogTypeMapper logTypeMapper;
-    private final ProcessInstanceService processInstanceService;
+    private final ApprovalBridgeService approvalBridgeService;
 
     @Override
     public DailyReportVO myForm(Long userId, Long deptId, Long logTypeId) {
@@ -57,6 +56,7 @@ public class DailyReportServiceImpl
         vo.setDeptId(deptId);
         vo.setReportTime(config.getReportTime());
         vo.setProcessTemplateId(config.getProcessTemplateId());
+        vo.setProcessKey(config.getProcessKey());
 
         // 表单信息
         FormDefinition formDef = formDefinitionMapper.selectById(config.getFormId());
@@ -67,15 +67,11 @@ public class DailyReportServiceImpl
         vo.setFormName(formDef.getName());
         vo.setSchemaJson(formDef.getSchemaJson());
 
-        if (config.getProcessTemplateId() != null) {
-            SysProcessTemplate template = templateMapper.selectById(config.getProcessTemplateId());
-            vo.setTemplateName(template != null ? template.getTemplateName() : null);
-        }
-
-        // 今日是否已提交
+        // 今日该类型是否已提交
         DailyReport today = getOne(new LambdaQueryWrapper<DailyReport>()
                 .eq(DailyReport::getUserId, userId)
                 .eq(DailyReport::getReportDate, LocalDate.now())
+                .eq(DailyReport::getLogTypeId, logTypeId)
                 .last("LIMIT 1"));
         if (today != null) {
             vo.setTodaySubmitted(true);
@@ -94,12 +90,13 @@ public class DailyReportServiceImpl
 
         LocalDate reportDate = request.getReportDate() != null ? request.getReportDate() : LocalDate.now();
 
-        // 当日查重
+        // 当日同类型查重
         Long exists = count(new LambdaQueryWrapper<DailyReport>()
                 .eq(DailyReport::getUserId, userId)
-                .eq(DailyReport::getReportDate, reportDate));
+                .eq(DailyReport::getReportDate, reportDate)
+                .eq(DailyReport::getLogTypeId, logTypeId));
         if (exists > 0) {
-            throw new BusinessException(ResultCode.DUPLICATE_KEY, "今日日报已提交，不能重复提交");
+            throw new BusinessException(ResultCode.DUPLICATE_KEY, "今日该类型日志已提交，不能重复提交");
         }
 
         // 保存日志记录
@@ -112,19 +109,27 @@ public class DailyReportServiceImpl
         report.setReportDate(reportDate);
         report.setDataJson(JSONUtil.toJsonStr(request.getFormData()));
         report.setSubmitTime(LocalDateTime.now());
-        // 配置了审批模板 → 待审批；否则直接提交成功
-        report.setStatus(config.getProcessTemplateId() != null ? "pending" : "submitted");
+
+        // 配置了审批流程 → 待审批；否则直接提交成功
+        boolean needsApproval = StringUtils.hasText(config.getProcessKey());
+        report.setStatus(needsApproval ? "pending" : "submitted");
         save(report);
 
-        // 自动发起审批（审批通过/驳回通过事件联动更新日报状态）
-        if (config.getProcessTemplateId() != null) {
-            StartProcessRequest startReq = new StartProcessRequest();
-            startReq.setTemplateId(config.getProcessTemplateId());
-            startReq.setTitle(String.format("日报-%s-%s", userName, reportDate));
-            startReq.setFormData(request.getFormData());
-            var vo = processInstanceService.startProcess(
-                    startReq, userId, userName, deptId);
-            report.setApprovalInstId(vo.getId());
+        // 自动发起 Flowable 审批（审批通过/驳回通过事件联动更新日报状态）
+        if (needsApproval) {
+            String title = String.format("%s-%s-%s", getLogTypeName(logTypeId), userName, reportDate);
+            String businessKey = String.format("daily_report:%d", report.getId());
+
+            ApprovalRequest approvalReq = approvalBridgeService.startApproval(
+                    config.getProcessKey(),
+                    businessKey,
+                    title,
+                    config.getFormId(),
+                    request.getFormData(),
+                    userId, userName, deptId,
+                    Collections.emptyList());
+
+            report.setApprovalInstId(approvalReq.getProcessInstanceId());
             updateById(report);
         }
 
@@ -158,12 +163,16 @@ public class DailyReportServiceImpl
     /**
      * 监听审批终态：日报绑定的审批实例结束（通过/驳回/撤销）后联动更新日报状态。
      * approved→已通过 rejected→已驳回 cancelled→审批被撤销，日报回到已提交
+     *
+     * 迁移说明：事件来源从自研审批链(ApprovalFinishedEvent@approval.event)
+     * 改为 Flowable 桥接层(ApprovalFinishedEvent@flowable.event)
      */
     @EventListener
     @Transactional(rollbackFor = Exception.class)
     public void onApprovalFinished(ApprovalFinishedEvent event) {
+        // 通过 processInstanceId 关联日报
         DailyReport report = getOne(new LambdaQueryWrapper<DailyReport>()
-                .eq(DailyReport::getApprovalInstId, event.getInstanceId())
+                .eq(DailyReport::getApprovalInstId, event.getProcessInstanceId())
                 .last("LIMIT 1"));
         if (report == null) {
             // 不是日报发起的审批，无需联动
@@ -176,10 +185,17 @@ public class DailyReportServiceImpl
         };
         report.setStatus(status);
         updateById(report);
-        log.info("日报[{}] 关联审批实例[{}] 结束, 状态联动为 [{}]", report.getId(), event.getInstanceId(), status);
+        log.info("日报[{}] 关联审批流程[{}] 结束, 状态联动为 [{}]",
+                report.getId(), event.getProcessInstanceId(), status);
     }
 
     // ==================== 私有方法 ====================
+
+    private String getLogTypeName(Long logTypeId) {
+        if (logTypeId == null) return "日志";
+        LogType logType = logTypeMapper.selectById(logTypeId);
+        return logType != null ? logType.getName() : "日志";
+    }
 
     private DailyFormConfig findEnabledConfig(Long deptId, Long logTypeId) {
         DailyFormConfig config = configMapper.selectOne(new LambdaQueryWrapper<DailyFormConfig>()

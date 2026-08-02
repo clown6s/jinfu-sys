@@ -130,8 +130,6 @@ public class AuthController {
         info.put("userId", loginUser.getUserId());
         info.put("username", loginUser.getUsername());
 
-        // Profile fields are loaded from DB — the Redis session cache holds
-        // authorization data only (userId/username/status/roles/permissions)
         SysUser sysUser = sysUserMapper.selectById(loginUser.getUserId());
         if (sysUser != null) {
             info.put("nickname", sysUser.getNickname());
