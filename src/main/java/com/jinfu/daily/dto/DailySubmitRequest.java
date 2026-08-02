@@ -12,10 +12,14 @@ import java.util.Map;
 @Data
 public class DailySubmitRequest {
 
+    /** 日志类型ID（日报/周报/月报等） */
+    @NotNull(message = "请选择日志类型")
+    private Long logTypeId;
+
     /** 填报日期（默认当天） */
     private LocalDate reportDate;
 
     /** 表单数据（JSON对象，key-value） */
-    @NotNull(message = "请填写日报内容")
+    @NotNull(message = "请填写日志内容")
     private Map<String, Object> formData;
 }

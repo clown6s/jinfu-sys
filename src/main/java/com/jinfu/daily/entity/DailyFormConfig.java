@@ -14,12 +14,16 @@ import lombok.EqualsAndHashCode;
 @TableName("daily_form_config")
 public class DailyFormConfig extends BaseEntity {
 
-    /** 部门ID（唯一绑定） */
+    /** 日志类型ID（日报/周报/月报等） */
+    @NotNull(message = "请选择日志类型")
+    private Long logTypeId;
+
+    /** 部门ID（联合唯一：deptId + logTypeId） */
     @NotNull(message = "请选择部门")
     private Long deptId;
 
-    /** 关联表单定义ID（各部门日报表单可不同） */
-    @NotNull(message = "请选择日报表单")
+    /** 关联表单定义ID（各部门各类型日志表单可不同） */
+    @NotNull(message = "请选择日志表单")
     private Long formId;
 
     /** 关联审批模板ID（NULL=日报不需审批） */

@@ -11,8 +11,12 @@ import java.time.LocalDateTime;
 @Data
 public class DailyReportVO {
 
-    /** 日报记录ID */
+    /** 日志记录ID */
     private Long id;
+
+    /** 日志类型 */
+    private Long logTypeId;
+    private String logTypeName;
 
     /** 填报人 */
     private Long userId;

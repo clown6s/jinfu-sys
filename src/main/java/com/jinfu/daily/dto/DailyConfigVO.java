@@ -9,6 +9,8 @@ import lombok.Data;
 public class DailyConfigVO {
 
     private Long id;
+    private Long logTypeId;
+    private String logTypeName;
     private Long deptId;
     private String deptName;
     private Long formId;

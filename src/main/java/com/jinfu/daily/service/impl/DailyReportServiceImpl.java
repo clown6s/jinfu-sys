@@ -16,8 +16,10 @@ import com.jinfu.daily.dto.DailyReportVO;
 import com.jinfu.daily.dto.DailySubmitRequest;
 import com.jinfu.daily.entity.DailyFormConfig;
 import com.jinfu.daily.entity.DailyReport;
+import com.jinfu.daily.entity.LogType;
 import com.jinfu.daily.mapper.DailyFormConfigMapper;
 import com.jinfu.daily.mapper.DailyReportMapper;
+import com.jinfu.daily.mapper.LogTypeMapper;
 import com.jinfu.daily.service.DailyReportService;
 import com.jinfu.form.entity.FormDefinition;
 import com.jinfu.form.mapper.FormDefinitionMapper;
@@ -43,11 +45,12 @@ public class DailyReportServiceImpl
     private final FormDefinitionMapper formDefinitionMapper;
     private final SysDeptMapper deptMapper;
     private final SysProcessTemplateMapper templateMapper;
+    private final LogTypeMapper logTypeMapper;
     private final ProcessInstanceService processInstanceService;
 
     @Override
-    public DailyReportVO myForm(Long userId, Long deptId) {
-        DailyFormConfig config = findEnabledConfig(deptId);
+    public DailyReportVO myForm(Long userId, Long deptId, Long logTypeId) {
+        DailyFormConfig config = findEnabledConfig(deptId, logTypeId);
 
         DailyReportVO vo = new DailyReportVO();
         vo.setUserId(userId);
@@ -86,8 +89,8 @@ public class DailyReportServiceImpl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public DailyReportVO submit(DailySubmitRequest request, Long userId, String userName, Long deptId) {
-        DailyFormConfig config = findEnabledConfig(deptId);
+    public DailyReportVO submit(DailySubmitRequest request, Long userId, String userName, Long deptId, Long logTypeId) {
+        DailyFormConfig config = findEnabledConfig(deptId, logTypeId);
 
         LocalDate reportDate = request.getReportDate() != null ? request.getReportDate() : LocalDate.now();
 
@@ -99,10 +102,11 @@ public class DailyReportServiceImpl
             throw new BusinessException(ResultCode.DUPLICATE_KEY, "今日日报已提交，不能重复提交");
         }
 
-        // 保存日报记录
+        // 保存日志记录
         DailyReport report = new DailyReport();
         report.setUserId(userId);
         report.setUserName(userName);
+        report.setLogTypeId(logTypeId);
         report.setDeptId(deptId);
         report.setFormId(config.getFormId());
         report.setReportDate(reportDate);
@@ -128,10 +132,14 @@ public class DailyReportServiceImpl
     }
 
     @Override
-    public IPage<DailyReportVO> myReports(Page<DailyReport> page, Long userId) {
-        IPage<DailyReport> resultPage = page(page, new LambdaQueryWrapper<DailyReport>()
-                .eq(DailyReport::getUserId, userId)
-                .orderByDesc(DailyReport::getReportDate));
+    public IPage<DailyReportVO> myReports(Page<DailyReport> page, Long userId, Long logTypeId) {
+        LambdaQueryWrapper<DailyReport> wrapper = new LambdaQueryWrapper<DailyReport>()
+                .eq(DailyReport::getUserId, userId);
+        if (logTypeId != null) {
+            wrapper.eq(DailyReport::getLogTypeId, logTypeId);
+        }
+        wrapper.orderByDesc(DailyReport::getReportDate);
+        IPage<DailyReport> resultPage = page(page, wrapper);
         return resultPage.convert(this::toVO);
     }
 
@@ -173,15 +181,16 @@ public class DailyReportServiceImpl
 
     // ==================== 私有方法 ====================
 
-    private DailyFormConfig findEnabledConfig(Long deptId) {
+    private DailyFormConfig findEnabledConfig(Long deptId, Long logTypeId) {
         DailyFormConfig config = configMapper.selectOne(new LambdaQueryWrapper<DailyFormConfig>()
                 .eq(DailyFormConfig::getDeptId, deptId)
+                .eq(DailyFormConfig::getLogTypeId, logTypeId)
                 .last("LIMIT 1"));
         if (config == null) {
-            throw new BusinessException(ResultCode.DATA_NOT_EXIST, "本部门未配置日报表单，请联系管理员");
+            throw new BusinessException(ResultCode.DATA_NOT_EXIST, "本部门未配置该类型日志表单，请联系管理员");
         }
         if (config.getEnabled() == null || config.getEnabled() != 1) {
-            throw new BusinessException(ResultCode.DATA_NOT_EXIST, "本部门日报填报已停用");
+            throw new BusinessException(ResultCode.DATA_NOT_EXIST, "本部门该类型日志填报已停用");
         }
         return config;
     }
@@ -189,6 +198,7 @@ public class DailyReportServiceImpl
     private DailyReportVO toVO(DailyReport report) {
         DailyReportVO vo = new DailyReportVO();
         vo.setId(report.getId());
+        vo.setLogTypeId(report.getLogTypeId());
         vo.setUserId(report.getUserId());
         vo.setUserName(report.getUserName());
         vo.setDeptId(report.getDeptId());
@@ -198,6 +208,11 @@ public class DailyReportServiceImpl
         vo.setStatus(report.getStatus());
         vo.setApprovalInstId(report.getApprovalInstId());
         vo.setSubmitTime(report.getSubmitTime());
+
+        if (report.getLogTypeId() != null) {
+            LogType logType = logTypeMapper.selectById(report.getLogTypeId());
+            vo.setLogTypeName(logType != null ? logType.getName() : null);
+        }
 
         SysDept dept = report.getDeptId() != null ? deptMapper.selectById(report.getDeptId()) : null;
         vo.setDeptName(dept != null ? dept.getDeptName() : null);

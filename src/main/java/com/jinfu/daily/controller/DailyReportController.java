@@ -17,49 +17,51 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 日报填报
- * 需求1+2：日报绑定部门表单，提交后自动发起审批、审批结果消息通知
+ * 日志填报 — 支持日报/周报/月报/项目日志等多种类型
  */
 @RestController
 @RequestMapping("/daily")
 @RequiredArgsConstructor
-@Tag(name = "日报填报")
+@Tag(name = "日志填报")
 public class DailyReportController {
 
     private final DailyReportService reportService;
 
     @GetMapping("/my-form")
     @RequiresPermission("daily:report:list")
-    @Operation(summary = "我的日报表单（返回部门配置的表单 Schema 与今日提交状态）")
-    public Result<DailyReportVO> myForm(@AuthenticationPrincipal LoginUser loginUser) {
+    @Operation(summary = "我的日志表单（返回部门配置的表单 Schema 与今日提交状态）")
+    public Result<DailyReportVO> myForm(
+            @RequestParam Long logTypeId,
+            @AuthenticationPrincipal LoginUser loginUser) {
         return Result.success(reportService.myForm(
-                loginUser.getUserId(), loginUser.getDeptId()));
+                loginUser.getUserId(), loginUser.getDeptId(), logTypeId));
     }
 
     @PostMapping("/submit")
     @RequiresPermission("daily:report:add")
-    @Operation(summary = "提交日报（配置了审批模板则自动发起审批）")
+    @Operation(summary = "提交日志（配置了审批模板则自动发起审批）")
     public Result<DailyReportVO> submit(
             @Valid @RequestBody DailySubmitRequest request,
             @AuthenticationPrincipal LoginUser loginUser) {
         return Result.success(reportService.submit(
-                request, loginUser.getUserId(), loginUser.getNickname(), loginUser.getDeptId()));
+                request, loginUser.getUserId(), loginUser.getNickname(), loginUser.getDeptId(), request.getLogTypeId()));
     }
 
     @GetMapping("/my")
     @RequiresPermission("daily:report:list")
-    @Operation(summary = "我的日报历史")
+    @Operation(summary = "我的日志历史（可按类型筛选）")
     public Result<IPage<DailyReportVO>> myReports(
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) Long logTypeId,
             @AuthenticationPrincipal LoginUser loginUser) {
         Page<DailyReport> page = new Page<>(pageNum, pageSize);
-        return Result.success(reportService.myReports(page, loginUser.getUserId()));
+        return Result.success(reportService.myReports(page, loginUser.getUserId(), logTypeId));
     }
 
     @GetMapping("/{id}")
     @RequiresPermission("daily:report:list")
-    @Operation(summary = "日报详情")
+    @Operation(summary = "日志详情")
     public Result<DailyReportVO> detail(@PathVariable Long id, @AuthenticationPrincipal LoginUser loginUser) {
         return Result.success(reportService.detail(id, loginUser.getUserId()));
     }

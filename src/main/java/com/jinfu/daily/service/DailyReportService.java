@@ -10,22 +10,22 @@ import com.jinfu.daily.entity.DailyReport;
 public interface DailyReportService extends IService<DailyReport> {
 
     /**
-     * 我的日报表单：按当前用户部门解析对应表单 schema（含今日是否已提交）
+     * 我的日志表单：按当前用户部门和日志类型解析对应表单 schema（含今日是否已提交）
      */
-    DailyReportVO myForm(Long userId, Long deptId);
+    DailyReportVO myForm(Long userId, Long deptId, Long logTypeId);
 
     /**
-     * 提交日报（当日查重；配置了审批模板则自动发起审批并推送待办消息）
+     * 提交日志（当日查重；配置了审批模板则自动发起审批并推送待办消息）
      */
-    DailyReportVO submit(DailySubmitRequest request, Long userId, String userName, Long deptId);
+    DailyReportVO submit(DailySubmitRequest request, Long userId, String userName, Long deptId, Long logTypeId);
 
     /**
-     * 我的日报列表（分页，按日期倒序）
+     * 我的日志列表（分页，按日期倒序，可按类型筛选）
      */
-    IPage<DailyReportVO> myReports(Page<DailyReport> page, Long userId);
+    IPage<DailyReportVO> myReports(Page<DailyReport> page, Long userId, Long logTypeId);
 
     /**
-     * 日报详情（仅本人可查）
+     * 日志详情（仅本人可查）
      */
     DailyReportVO detail(Long id, Long userId);
 }

@@ -22,6 +22,9 @@ public class DailyReport extends BaseEntity {
     /** 填报人姓名快照 */
     private String userName;
 
+    /** 日志类型ID */
+    private Long logTypeId;
+
     /** 填报人部门ID */
     private Long deptId;
 

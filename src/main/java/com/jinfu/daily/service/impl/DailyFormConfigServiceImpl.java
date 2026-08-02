@@ -10,7 +10,9 @@ import com.jinfu.common.exception.BusinessException;
 import com.jinfu.common.result.ResultCode;
 import com.jinfu.daily.dto.DailyConfigVO;
 import com.jinfu.daily.entity.DailyFormConfig;
+import com.jinfu.daily.entity.LogType;
 import com.jinfu.daily.mapper.DailyFormConfigMapper;
+import com.jinfu.daily.mapper.LogTypeMapper;
 import com.jinfu.daily.service.DailyFormConfigService;
 import com.jinfu.form.entity.FormDefinition;
 import com.jinfu.form.mapper.FormDefinitionMapper;
@@ -34,6 +36,7 @@ public class DailyFormConfigServiceImpl
     private final SysDeptMapper deptMapper;
     private final FormDefinitionMapper formDefinitionMapper;
     private final SysProcessTemplateMapper templateMapper;
+    private final LogTypeMapper logTypeMapper;
 
     @Override
     public IPage<DailyConfigVO> pageConfigs(Page<DailyFormConfig> page, String keyword) {
@@ -53,8 +56,11 @@ public class DailyFormConfigServiceImpl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addConfig(DailyFormConfig config) {
-        if (lambdaQuery().eq(DailyFormConfig::getDeptId, config.getDeptId()).exists()) {
-            throw new BusinessException(ResultCode.DUPLICATE_KEY, "该部门已配置日报表单");
+        if (lambdaQuery()
+                .eq(DailyFormConfig::getDeptId, config.getDeptId())
+                .eq(DailyFormConfig::getLogTypeId, config.getLogTypeId())
+                .exists()) {
+            throw new BusinessException(ResultCode.DUPLICATE_KEY, "该部门已配置该类型日志表单");
         }
         if (config.getEnabled() == null) {
             config.setEnabled(1);
@@ -72,10 +78,17 @@ public class DailyFormConfigServiceImpl
         if (existing == null) {
             throw new BusinessException(ResultCode.DATA_NOT_EXIST, "日报配置不存在");
         }
-        // 部门变更时查重
-        if (config.getDeptId() != null && !config.getDeptId().equals(existing.getDeptId())) {
-            if (lambdaQuery().eq(DailyFormConfig::getDeptId, config.getDeptId()).exists()) {
-                throw new BusinessException(ResultCode.DUPLICATE_KEY, "该部门已配置日报表单");
+        // 部门或类型变更时查重（联合唯一：deptId + logTypeId）
+        boolean deptChanged = config.getDeptId() != null && !config.getDeptId().equals(existing.getDeptId());
+        boolean typeChanged = config.getLogTypeId() != null && !config.getLogTypeId().equals(existing.getLogTypeId());
+        if (deptChanged || typeChanged) {
+            Long checkDeptId = deptChanged ? config.getDeptId() : existing.getDeptId();
+            Long checkTypeId = typeChanged ? config.getLogTypeId() : existing.getLogTypeId();
+            if (lambdaQuery()
+                    .eq(DailyFormConfig::getDeptId, checkDeptId)
+                    .eq(DailyFormConfig::getLogTypeId, checkTypeId)
+                    .exists()) {
+                throw new BusinessException(ResultCode.DUPLICATE_KEY, "该部门已配置该类型日志表单");
             }
         }
         updateById(config);
@@ -94,12 +107,17 @@ public class DailyFormConfigServiceImpl
     private DailyConfigVO toVO(DailyFormConfig config) {
         DailyConfigVO vo = new DailyConfigVO();
         vo.setId(config.getId());
+        vo.setLogTypeId(config.getLogTypeId());
         vo.setDeptId(config.getDeptId());
         vo.setFormId(config.getFormId());
         vo.setProcessTemplateId(config.getProcessTemplateId());
         vo.setReportTime(config.getReportTime());
         vo.setEnabled(config.getEnabled());
 
+        if (config.getLogTypeId() != null) {
+            LogType logType = logTypeMapper.selectById(config.getLogTypeId());
+            vo.setLogTypeName(logType != null ? logType.getName() : null);
+        }
         if (config.getDeptId() != null) {
             SysDept dept = deptMapper.selectById(config.getDeptId());
             vo.setDeptName(dept != null ? dept.getDeptName() : null);
